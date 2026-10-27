@@ -4,7 +4,7 @@ Aplicación web para que los alumnos de 5to (divisiones **A** y **B**) suban sus
 
 | Página | Link | Para qué |
 |---|---|---|
-| Subida | `/` | Cada alumno sube su `.stl` con nombre, apellido, nombre del objeto y división |
+| Subida | `/` | Cada alumno sube su `.stl` con nombre, apellido, nombre del objeto y división (y opcionalmente los datos de producción) |
 | Votación | `/votar` | Se ven todos los diseños en 3D y cada alumno elige **2** de su división (vota una sola vez) |
 | Resultados | `/resultados` | Ranking público con los 2 ganadores por división (se activa desde el panel) |
 | Panel | `/admin` | Gestión protegida con contraseña |
@@ -26,11 +26,21 @@ Aplicación web para que los alumnos de 5to (divisiones **A** y **B**) suban sus
 - Se controla por nombre + apellido + división (sin importar mayúsculas ni tildes) y, opcionalmente, un voto por dispositivo.
 - Ganan los **2 más votados de cada división**. Si hay empate en el 2° puesto, el panel lo avisa.
 
+## Datos de producción
+
+Cada diseño puede tener, cargados a mano y opcionales:
+
+- ⏱ **Tiempo** de impresión en minutos (se muestra como "2 h 15 min")
+- 🧵 **Material** utilizado en gramos
+- 💲 **Costo** de producción en pesos
+
+Se cargan al subir el diseño o desde el panel (al agregar o editar un diseño), y se muestran en las tarjetas de votación, en el visor 3D y en el panel.
+
 ## Panel de gestión (`/admin`)
 
 - Abrir/cerrar la subida y la votación, publicar resultados.
 - Activar/desactivar "un voto por dispositivo" (desactivalo si votan desde las compus compartidas de la escuela).
-- Agregar diseños manualmente, editar datos, ver en 3D, descargar y eliminar.
+- Agregar diseños manualmente, editar datos (incluidos tiempo, material y costo), ver en 3D, descargar y eliminar.
 - Ranking en vivo, lista de votantes, anular votos individuales o borrar todos.
 - Links para compartir listos para copiar.
 

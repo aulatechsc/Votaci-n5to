@@ -109,7 +109,7 @@
   </div>
 
   <script type="module">
-    import { api, esc, showMsg, hideMsg, divBadge, DIV_COLORS } from '/js/common.js';
+    import { api, esc, showMsg, hideMsg, divBadge, DIV_COLORS, paramsHtml } from '/js/common.js';
     import { thumbnail } from '/js/stl.js';
     import { openModal, closeModal } from '/js/modal.js';
 
@@ -204,6 +204,7 @@
           <div class="info">
             <div class="obj">${esc(d.objeto)}</div>
             <div class="who">${esc(d.nombre)} ${esc(d.apellido)}</div>
+            ${paramsHtml(d)}
             <div class="pick">
               ${d.mine
                 ? '<button class="btn ghost sm block" disabled>Es tu diseño 😉</button>'

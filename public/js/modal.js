@@ -1,4 +1,4 @@
-import { esc, divBadge, DIV_COLORS } from '/js/common.js';
+import { esc, divBadge, DIV_COLORS, paramsHtml } from '/js/common.js';
 import { createViewer } from '/js/stl.js';
 
 // Modal con visor 3D interactivo
@@ -19,6 +19,7 @@ function ensure() {
         <button class="xbtn" aria-label="Cerrar">✕</button>
       </div>
       <div class="modal-body">
+        <div id="mParams" style="margin:-6px 0 12px"></div>
         <div class="viewer" id="mViewer"></div>
         <p class="hint">Arrastrá para girar · rueda o pellizco para hacer zoom</p>
         <div id="mActions" style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap"></div>
@@ -35,6 +36,7 @@ export function openModal(design, actionsHtml = '') {
   ensure();
   modal.querySelector('#mTitle').textContent = design.objeto;
   modal.querySelector('#mSub').innerHTML = `${esc(design.nombre)} ${esc(design.apellido)} · ${divBadge(design.division)}`;
+  modal.querySelector('#mParams').innerHTML = paramsHtml(design);
   modal.querySelector('#mActions').innerHTML = actionsHtml;
   modal.classList.add('show');
   document.body.style.overflow = 'hidden';

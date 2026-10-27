@@ -70,6 +70,22 @@ function normalize(str) {
     .replace(/[̀-ͯ]/g, '');
 }
 
+// Parámetros de producción (opcionales, cargados a mano): minutos, gramos y costo
+const PARAMS = { tiempoMin: 'tiempo', materialG: 'material', costo: 'costo' };
+
+function parseParam(value, label) {
+  if (value === undefined || value === null || String(value).trim() === '') return null;
+  const n = Number(String(value).replace(',', '.'));
+  if (!Number.isFinite(n) || n < 0 || n > 1e7) throw new HttpError(400, `El valor de ${label} no es válido.`);
+  return Math.round(n * 100) / 100;
+}
+
+function parseParams(body) {
+  const out = {};
+  for (const [k, label] of Object.entries(PARAMS)) out[k] = parseParam(body[k], label);
+  return out;
+}
+
 function personKey(nombre, apellido, division) {
   return `${normalize(division)}|${normalize(apellido)}|${normalize(nombre)}`;
 }
@@ -81,6 +97,9 @@ function publicDesign(d) {
     apellido: d.apellido,
     objeto: d.objeto,
     division: d.division,
+    tiempoMin: d.tiempoMin ?? null,
+    materialG: d.materialG ?? null,
+    costo: d.costo ?? null,
     archivo: `/files/${d.file}`,
     tamano: d.size,
     creado: d.createdAt
@@ -148,11 +167,12 @@ class HttpError extends Error {
   }
 }
 
-function createDesign({ nombre, apellido, objeto, division }, file, { skipDuplicateCheck = false } = {}) {
-  nombre = clean(nombre);
-  apellido = clean(apellido);
-  objeto = clean(objeto, 80);
-  division = clean(division, 1).toUpperCase();
+function createDesign(body, file, { skipDuplicateCheck = false } = {}) {
+  const nombre = clean(body.nombre);
+  const apellido = clean(body.apellido);
+  const objeto = clean(body.objeto, 80);
+  const division = clean(body.division, 1).toUpperCase();
+  const params = parseParams(body);
 
   if (!nombre || !apellido || !objeto) throw new HttpError(400, 'Completá nombre, apellido y nombre del objeto.');
   if (!DIVISIONES.includes(division)) throw new HttpError(400, 'La división tiene que ser A o B.');
@@ -174,6 +194,7 @@ function createDesign({ nombre, apellido, objeto, division }, file, { skipDuplic
     apellido,
     objeto,
     division,
+    ...params,
     file: fileName,
     originalName: clean(file.originalname, 120),
     size: file.size,
@@ -351,6 +372,9 @@ app.patch('/api/admin/designs/:id', requireAdmin, (req, res) => {
       if (!val) throw new HttpError(400, `El campo ${k} no puede quedar vacío.`);
       d[k] = val;
     }
+  }
+  for (const [k, label] of Object.entries(PARAMS)) {
+    if (req.body[k] !== undefined) d[k] = parseParam(req.body[k], label);
   }
   if (req.body.division !== undefined) {
     const div = clean(req.body.division, 1).toUpperCase();

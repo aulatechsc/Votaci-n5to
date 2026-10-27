@@ -50,6 +50,10 @@
           <input id="objeto" name="objeto" type="text" maxlength="80" required placeholder="Ej: Porta lápices hexagonal">
         </div>
 
+        <fieldset class="params-box">
+          <legend>Datos de producción <small>(opcional)</small></legend>
+          <div id="paramsSlot"></div>
+        </fieldset>
         <div class="field">
           <label>División</label>
           <div class="seg">
@@ -87,7 +91,8 @@
   </div>
 
   <script type="module">
-    import { api, showMsg, hideMsg, DIV_COLORS } from '/js/common.js';
+    import { api, showMsg, hideMsg, DIV_COLORS, paramsFields } from '/js/common.js';
+    document.getElementById('paramsSlot').innerHTML = paramsFields();
     import { parseGeometry, createViewer } from '/js/stl.js';
 
     const form = document.getElementById('form');
@@ -166,6 +171,7 @@
       fd.append('apellido', apellido);
       fd.append('objeto', objeto);
       fd.append('division', division);
+      for (const k of ['tiempoMin', 'materialG', 'costo']) fd.append(k, form[k].value);
       fd.append('archivo', file);
 
       send.disabled = true;

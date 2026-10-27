@@ -198,7 +198,7 @@ input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 4px r
 .item .info { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
 .item .obj { font-weight: 700; font-size: 1.1rem; }
 .item .who { color: var(--muted); font-size: .92rem; }
-.item .pick { margin-top: 10px; }
+.item .pick { margin-top: auto; padding-top: 10px; }
 .item .check {
   position: absolute; top: 12px; left: 12px; width: 34px; height: 34px; border-radius: 50%;
   background: var(--accent); color: #fff; display: none; place-items: center; font-weight: 800;
@@ -307,4 +307,20 @@ input[type=file]::file-selector-button {
   .nav { flex-wrap: nowrap; }
   .nav a { padding: 7px 10px; font-size: .9rem; white-space: nowrap; }
   .card { padding: 18px; }
+}
+
+/* ---------- Parámetros de producción ---------- */
+.row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 620px) { .row3 { grid-template-columns: 1fr; } }
+input[type=number] {
+  width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--text); font: inherit; outline: none;
+}
+.params-box { border: 1px solid var(--line); border-radius: 14px; padding: 14px 14px 0; margin-bottom: 16px; background: rgba(255, 255, 255, .02); }
+.params-box legend { padding: 0 6px; font-weight: 600; font-size: .95rem; }
+.params-box legend small { color: var(--muted); font-weight: 400; }
+.params { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.param {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px;
+  background: var(--card-2); border: 1px solid var(--line); font-size: .82rem; font-weight: 600; white-space: nowrap;
 }

@@ -94,6 +94,10 @@
               <input type="radio" name="division" id="aB" value="B"><label for="aB" class="div-b">5° B</label>
             </div>
           </div>
+        <fieldset class="params-box">
+          <legend>Datos de producción <small>(opcional)</small></legend>
+          <div id="paramsSlot"></div>
+        </fieldset>
           <div class="field"><label for="aFile">Archivo STL</label><input id="aFile" name="archivo" type="file" accept=".stl" required></div>
           <button class="btn block" type="submit" id="aSend">Agregar diseño</button>
           <div id="addMsg" class="msg" role="status"></div>
@@ -113,7 +117,7 @@
       </div>
       <div class="card table-wrap">
         <table>
-          <thead><tr><th></th><th>Objeto</th><th>Alumno/a</th><th>Div.</th><th>Votos</th><th>Subido</th><th></th></tr></thead>
+          <thead><tr><th></th><th>Objeto</th><th>Alumno/a</th><th>Div.</th><th>Producción</th><th>Votos</th><th>Subido</th><th></th></tr></thead>
           <tbody id="designRows"></tbody>
         </table>
       </div>
@@ -134,12 +138,13 @@
   </div>
 
   <script type="module">
-    import { api, esc, showMsg, hideMsg, divBadge, DIV_COLORS } from '/js/common.js';
+    import { api, esc, showMsg, hideMsg, divBadge, DIV_COLORS, paramsFields, paramsHtml } from '/js/common.js';
     import { renderPodium } from '/js/results.js';
     import { openModal, closeModal } from '/js/modal.js';
     import { thumbnail } from '/js/stl.js';
 
     const $ = id => document.getElementById(id);
+    $('paramsSlot').innerHTML = paramsFields();
     let state = null;
     let filter = '';
     const thumbs = new Map();
@@ -202,6 +207,7 @@
           <td><b>${esc(d.objeto)}</b></td>
           <td>${esc(d.nombre)} ${esc(d.apellido)}</td>
           <td>${divBadge(d.division)}</td>
+          <td>${paramsHtml(d, { empty: '<span style="color:var(--muted)">—</span>' })}</td>
           <td class="votes-n">${d.votos}</td>
           <td style="color:var(--muted);font-size:.9rem">${new Date(d.creado).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}</td>
           <td><div class="actions">
@@ -210,7 +216,7 @@
             <button class="btn ghost sm" data-edit="${esc(d.id)}" title="Editar datos">✎</button>
             <button class="btn danger sm" data-del="${esc(d.id)}" title="Eliminar">🗑</button>
           </div></td>
-        </tr>`).join('') : '<tr><td colspan="7" class="empty-state" style="padding:24px">No hay diseños.</td></tr>';
+        </tr>`).join('') : '<tr><td colspan="8" class="empty-state" style="padding:24px">No hay diseños.</td></tr>';
 
       const byId = Object.fromEntries(designs.map(d => [d.id, d]));
       $('voteRows').innerHTML = state.votos.length ? state.votos
@@ -304,6 +310,7 @@
                 <select name="division"><option value="A" ${d.division === 'A' ? 'selected' : ''}>5° A</option><option value="B" ${d.division === 'B' ? 'selected' : ''}>5° B</option></select>
               </div>
             </div>
+            ${paramsFields(d)}
             <button class="btn" type="submit">Guardar cambios</button>
           </form>`);
         actions.querySelector('#editForm').addEventListener('submit', async ev => {
@@ -312,7 +319,10 @@
           try {
             await api(`/api/admin/designs/${encodeURIComponent(d.id)}`, {
               method: 'PATCH',
-              body: { nombre: f.nombre.value, apellido: f.apellido.value, objeto: f.objeto.value, division: f.division.value }
+              body: {
+                nombre: f.nombre.value, apellido: f.apellido.value, objeto: f.objeto.value, division: f.division.value,
+                tiempoMin: f.tiempoMin.value, materialG: f.materialG.value, costo: f.costo.value
+              }
             });
             closeModal();
             if (d.division !== f.division.value) thumbs.delete(d.id);
