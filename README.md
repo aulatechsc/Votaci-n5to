@@ -60,21 +60,33 @@ Variables de entorno:
 | `PORT` | `3000` | Puerto |
 | `DATA_DIR` | `./data` | Dónde se guardan `db.json` y los STL subidos |
 | `MAX_FILE_MB` | `50` | Tamaño máximo por archivo |
+| `BLOB_READ_WRITE_TOKEN` | — | Si está, usa Vercel Blob en vez del disco (Vercel lo crea solo al conectar el Blob Store) |
 
 ## Publicarlo en internet
 
-Hace falta un servidor con **disco persistente** (si no, los archivos se pierden al reiniciar).
+### Vercel (recomendado)
 
-**Render** (incluye `render.yaml`): New → Blueprint → elegir este repo → cargar `ADMIN_PASSWORD`. Usa un disco de 1 GB montado en `/var/data` (requiere plan pago).
+En Vercel no hay disco, así que los STL y los datos (diseños, votos, configuración) se guardan en **Vercel Blob**. Los archivos se suben directo desde el navegador a Blob, así que no hay límite de 4,5 MB.
 
-**Railway**: New Project → Deploy from GitHub → agregar un Volume montado en `/data` y las variables `DATA_DIR=/data` y `ADMIN_PASSWORD`.
+1. Importar el repo en Vercel (Add New → Project). `vercel.json` ya tiene todo configurado.
+2. En el proyecto: **Storage → Create → Blob** y conectarlo al proyecto (crea `BLOB_READ_WRITE_TOKEN`).
+3. Agregar la variable `ADMIN_PASSWORD` y volver a desplegar.
 
-También funciona en cualquier VPS o compu de la escuela con Node 18+ (`npm install && npm start`).
+### Servidor propio / Render / Railway
+
+Sin `BLOB_READ_WRITE_TOKEN`, la app guarda todo en disco (`DATA_DIR`). Hace falta disco persistente.
+
+- **Render** (incluye `render.yaml`): New → Blueprint → elegir este repo → cargar `ADMIN_PASSWORD`.
+- **Railway**: agregar un Volume montado en `/data` y las variables `DATA_DIR=/data` y `ADMIN_PASSWORD`.
+- Cualquier compu con Node 20+: `npm install && npm start`.
 
 ## Estructura
 
 ```
-server.js            API (Express) + almacenamiento en JSON
+server.js            API (Express)
+lib/store.js         Datos: JSON local o Vercel Blob
+api/index.js         Entrada para Vercel
+scripts/vendor.js    Copia Three.js y el cliente de Blob a public/vendor
 public/index.html    Subida
 public/votar.html    Votación
 public/resultados.html

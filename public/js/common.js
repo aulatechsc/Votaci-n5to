@@ -67,3 +67,43 @@ export function paramsFields(d = {}) {
       <div class="field"><label>💲 Costo ($)</label><input name="costo" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Ej: 1500" value="${v(d.costo)}"></div>
     </div>`;
 }
+
+// ---------- Subida de diseños ----------
+// Local: se manda el archivo al servidor. En Vercel: primero se validan los datos,
+// después el navegador sube el STL directo a Vercel Blob y por último se registra el diseño.
+let configPromise = null;
+export function getConfig() {
+  if (!configPromise) configPromise = api('/api/config');
+  return configPromise;
+}
+
+export async function uploadDesign(fields, file, { admin = false, onProgress } = {}) {
+  const cfg = await getConfig();
+  const endpoint = admin ? '/api/admin/designs' : '/api/designs';
+
+  if (cfg.almacenamiento !== 'blob') {
+    const fd = new FormData();
+    for (const [k, v] of Object.entries(fields)) fd.append(k, v ?? '');
+    fd.append('archivo', file);
+    return api(endpoint, { method: 'POST', body: fd });
+  }
+
+  await api('/api/designs/check', { method: 'POST', body: { ...fields, admin } });
+  const { upload } = await import('/vendor/blob-client.js');
+  const safe = `${fields.apellido}-${fields.nombre}-${fields.objeto}`
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^\w-]+/g, '_').slice(0, 80) || 'diseno';
+  let blob;
+  try {
+    blob = await upload(`stl/${safe}.stl`, file, {
+      access: 'public',
+      handleUploadUrl: '/api/upload-token',
+      contentType: 'model/stl',
+      multipart: file.size > 8 * 1024 * 1024,
+      onUploadProgress: onProgress ? e => onProgress(e.percentage) : undefined
+    });
+  } catch (err) {
+    throw new Error(/cerrada|stl|supera/i.test(err.message) ? err.message : 'No se pudo subir el archivo. Revisá la conexión y probá de nuevo.');
+  }
+  return api(endpoint, { method: 'POST', body: { ...fields, blobUrl: blob.url } });
+}

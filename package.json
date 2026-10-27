@@ -4,14 +4,18 @@
   "description": "Subida y votación de diseños 3D (STL) de 5to año — divisiones A y B",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "node scripts/vendor.js",
+    "postinstall": "node scripts/vendor.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "license": "MIT",
   "dependencies": {
+    "@vercel/blob": "^2.8.2",
     "cookie-parser": "^1.4.7",
+    "esbuild": "^0.28.2",
     "express": "^4.22.3",
     "multer": "^2.5.0",
     "three": "^0.160.0"

@@ -138,7 +138,7 @@
   </div>
 
   <script type="module">
-    import { api, esc, showMsg, hideMsg, divBadge, DIV_COLORS, paramsFields, paramsHtml } from '/js/common.js';
+    import { api, esc, showMsg, hideMsg, divBadge, DIV_COLORS, paramsFields, paramsHtml, uploadDesign } from '/js/common.js';
     import { renderPodium } from '/js/results.js';
     import { openModal, closeModal } from '/js/modal.js';
     import { thumbnail } from '/js/stl.js';
@@ -212,7 +212,7 @@
           <td style="color:var(--muted);font-size:.9rem">${new Date(d.creado).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}</td>
           <td><div class="actions">
             <button class="btn ghost sm" data-view="${esc(d.id)}" title="Ver en 3D">👁</button>
-            <a class="btn ghost sm" href="${esc(d.archivo)}" download="${esc(`${d.apellido}_${d.nombre}_${d.objeto}`.replace(/[^\w\-áéíóúñÁÉÍÓÚÑ]+/g, '_'))}.stl" title="Descargar">⬇</a>
+            <a class="btn ghost sm" href="${esc(d.descarga)}" download="${esc(`${d.apellido}_${d.nombre}_${d.objeto}`.replace(/[^\w\-áéíóúñÁÉÍÓÚÑ]+/g, '_'))}.stl" title="Descargar">⬇</a>
             <button class="btn ghost sm" data-edit="${esc(d.id)}" title="Editar datos">✎</button>
             <button class="btn danger sm" data-del="${esc(d.id)}" title="Eliminar">🗑</button>
           </div></td>
@@ -360,7 +360,9 @@
       if (!f.archivo.files[0]) return showMsg($('addMsg'), 'Elegí el archivo STL.');
       $('aSend').disabled = true;
       try {
-        await api('/api/admin/designs', { method: 'POST', body: new FormData(f) });
+        const fields = {};
+        for (const k of ['nombre', 'apellido', 'objeto', 'division', 'tiempoMin', 'materialG', 'costo']) fields[k] = f[k].value;
+        await uploadDesign(fields, f.archivo.files[0], { admin: true, onProgress: p => { $('aSend').textContent = `Subiendo… ${Math.round(p)}%`; } });
         showMsg($('addMsg'), 'Diseño agregado ✔', true);
         f.reset();
         load();
@@ -368,6 +370,7 @@
         showMsg($('addMsg'), err.message);
       } finally {
         $('aSend').disabled = false;
+        $('aSend').textContent = 'Agregar diseño';
       }
     });
 
