@@ -1,0 +1,19 @@
+{
+  "name": "votacion-5to",
+  "version": "1.0.0",
+  "description": "Subida y votación de diseños 3D (STL) de 5to año — divisiones A y B",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "express": "^4.22.3",
+    "multer": "^2.5.0",
+    "three": "^0.160.0"
+  }
+}

@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Panel de gestión · Diseños 3D 5to</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+  <script type="importmap">
+    { "imports": {
+      "three": "/vendor/three/build/three.module.js",
+      "three/addons/": "/vendor/three/examples/jsm/"
+    } }
+  </script>
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <a class="brand" href="/admin"><span class="brand-logo">⚙️</span> Panel de gestión</a>
+      <nav class="nav">
+        <a href="/" target="_blank">Subir</a>
+        <a href="/votar" target="_blank">Votación</a>
+        <a href="#" id="logout" hidden>Salir</a>
+      </nav>
+    </header>
+
+    <!-- Login -->
+    <section id="login" class="card" style="max-width:420px;margin:60px auto" hidden>
+      <h2 style="margin-top:0">🔐 Ingresá</h2>
+      <form id="loginForm">
+        <div class="field">
+          <label for="pass">Contraseña</label>
+          <input id="pass" type="password" autocomplete="current-password" required autofocus>
+        </div>
+        <button class="btn block" type="submit">Entrar</button>
+        <div id="loginMsg" class="msg" role="status"></div>
+      </form>
+    </section>
+
+    <!-- Panel -->
+    <main id="panel" hidden>
+      <div class="stats" id="stats"></div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="margin-top:0">Configuración</h3>
+          <div class="toggles">
+            <label class="toggle">
+              <span>Subida de diseños abierta<small>Los alumnos pueden subir sus STL</small></span>
+              <span class="switch"><input type="checkbox" data-setting="subidaAbierta"><span></span></span>
+            </label>
+            <label class="toggle">
+              <span>Votación abierta<small>Se puede votar en /votar</small></span>
+              <span class="switch"><input type="checkbox" data-setting="votacionAbierta"><span></span></span>
+            </label>
+            <label class="toggle">
+              <span>Resultados públicos<small>Muestra el ranking en /resultados</small></span>
+              <span class="switch"><input type="checkbox" data-setting="resultadosPublicos"><span></span></span>
+            </label>
+            <label class="toggle">
+              <span>Un voto por dispositivo<small>Desactivalo si votan desde compus compartidas de la escuela</small></span>
+              <span class="switch"><input type="checkbox" data-setting="unVotoPorDispositivo"><span></span></span>
+            </label>
+          </div>
+          <h3>Links para compartir</h3>
+          <div class="field">
+            <label>Subida de archivos</label>
+            <div class="linkbox"><input type="text" readonly id="linkUp"><button class="btn ghost sm" data-copy="linkUp">Copiar</button></div>
+          </div>
+          <div class="field">
+            <label>Votación</label>
+            <div class="linkbox"><input type="text" readonly id="linkVote"><button class="btn ghost sm" data-copy="linkVote">Copiar</button></div>
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Resultados</label>
+            <div class="linkbox"><input type="text" readonly id="linkRes"><button class="btn ghost sm" data-copy="linkRes">Copiar</button></div>
+          </div>
+        </div>
+
+        <form id="addForm" class="card" novalidate>
+          <h3 style="margin-top:0">➕ Agregar diseño manualmente</h3>
+          <div class="row">
+            <div class="field"><label for="aNombre">Nombre</label><input id="aNombre" name="nombre" type="text" maxlength="60" required></div>
+            <div class="field"><label for="aApellido">Apellido</label><input id="aApellido" name="apellido" type="text" maxlength="60" required></div>
+          </div>
+          <div class="field"><label for="aObjeto">Nombre del objeto</label><input id="aObjeto" name="objeto" type="text" maxlength="80" required></div>
+          <div class="field">
+            <label>División</label>
+            <div class="seg">
+              <input type="radio" name="division" id="aA" value="A"><label for="aA" class="div-a">5° A</label>
+              <input type="radio" name="division" id="aB" value="B"><label for="aB" class="div-b">5° B</label>
+            </div>
+          </div>
+          <div class="field"><label for="aFile">Archivo STL</label><input id="aFile" name="archivo" type="file" accept=".stl" required></div>
+          <button class="btn block" type="submit" id="aSend">Agregar diseño</button>
+          <div id="addMsg" class="msg" role="status"></div>
+        </form>
+      </div>
+
+      <div class="section-title"><h2>🏆 Ranking en vivo</h2><button class="btn ghost sm" id="refresh">↻ Actualizar</button></div>
+      <div id="podium" class="podium"></div>
+
+      <div class="section-title">
+        <h2>📦 Diseños</h2>
+        <div class="tabs" id="divTabs">
+          <button class="on" data-div="">Todos</button>
+          <button data-div="A">5° A</button>
+          <button data-div="B">5° B</button>
+        </div>
+      </div>
+      <div class="card table-wrap">
+        <table>
+          <thead><tr><th></th><th>Objeto</th><th>Alumno/a</th><th>Div.</th><th>Votos</th><th>Subido</th><th></th></tr></thead>
+          <tbody id="designRows"></tbody>
+        </table>
+      </div>
+
+      <div class="section-title">
+        <h2>🗳️ Votos registrados</h2>
+        <button class="btn danger sm" id="resetVotes">Borrar todos los votos</button>
+      </div>
+      <div class="card table-wrap">
+        <table>
+          <thead><tr><th>Votante</th><th>Div.</th><th>Votó a</th><th>Fecha</th><th></th></tr></thead>
+          <tbody id="voteRows"></tbody>
+        </table>
+      </div>
+    </main>
+
+    <footer>Panel de gestión · Votación de diseños 3D</footer>
+  </div>
+
+  <script type="module">
+    import { api, esc, showMsg, hideMsg, divBadge, DIV_COLORS } from '/js/common.js';
+    import { renderPodium } from '/js/results.js';
+    import { openModal, closeModal } from '/js/modal.js';
+    import { thumbnail } from '/js/stl.js';
+
+    const $ = id => document.getElementById(id);
+    let state = null;
+    let filter = '';
+    const thumbs = new Map();
+
+    const origin = location.origin;
+    $('linkUp').value = `${origin}/`;
+    $('linkVote').value = `${origin}/votar`;
+    $('linkRes').value = `${origin}/resultados`;
+    document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => {
+      const input = $(b.dataset.copy);
+      try { await navigator.clipboard.writeText(input.value); } catch { input.select(); document.execCommand('copy'); }
+      b.textContent = '¡Copiado!';
+      setTimeout(() => { b.textContent = 'Copiar'; }, 1500);
+    }));
+
+    function showLogin() {
+      $('login').hidden = false;
+      $('panel').hidden = true;
+      $('logout').hidden = true;
+    }
+
+    async function load() {
+      try {
+        state = await api('/api/admin/state');
+      } catch (err) {
+        if (err.status === 401) return showLogin();
+        alert(err.message);
+        return;
+      }
+      $('login').hidden = true;
+      $('panel').hidden = false;
+      $('logout').hidden = false;
+      render();
+    }
+
+    function allDesigns() {
+      return [...state.resultados.A, ...state.resultados.B];
+    }
+
+    function render() {
+      const designs = allDesigns();
+      const s = state.settings;
+      document.querySelectorAll('[data-setting]').forEach(i => { i.checked = !!s[i.dataset.setting]; });
+
+      $('stats').innerHTML = [
+        ['Diseños 5° A', state.resultados.A.length],
+        ['Diseños 5° B', state.resultados.B.length],
+        ['Votos 5° A', state.votos.filter(v => v.division === 'A').length],
+        ['Votos 5° B', state.votos.filter(v => v.division === 'B').length]
+      ].map(([l, n]) => `<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+
+      renderPodium($('podium'), state.resultados, { onView: d => openModal(d) });
+
+      const list = designs
+        .filter(d => !filter || d.division === filter)
+        .sort((a, b) => a.division.localeCompare(b.division) || a.apellido.localeCompare(b.apellido));
+      $('designRows').innerHTML = list.length ? list.map(d => `
+        <tr>
+          <td><img class="mini-thumb" data-thumb="${esc(d.id)}" alt="" ${thumbs.has(d.id) ? `src="${thumbs.get(d.id)}"` : ''}></td>
+          <td><b>${esc(d.objeto)}</b></td>
+          <td>${esc(d.nombre)} ${esc(d.apellido)}</td>
+          <td>${divBadge(d.division)}</td>
+          <td class="votes-n">${d.votos}</td>
+          <td style="color:var(--muted);font-size:.9rem">${new Date(d.creado).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}</td>
+          <td><div class="actions">
+            <button class="btn ghost sm" data-view="${esc(d.id)}" title="Ver en 3D">👁</button>
+            <a class="btn ghost sm" href="${esc(d.archivo)}" download="${esc(`${d.apellido}_${d.nombre}_${d.objeto}`.replace(/[^\w\-áéíóúñÁÉÍÓÚÑ]+/g, '_'))}.stl" title="Descargar">⬇</a>
+            <button class="btn ghost sm" data-edit="${esc(d.id)}" title="Editar datos">✎</button>
+            <button class="btn danger sm" data-del="${esc(d.id)}" title="Eliminar">🗑</button>
+          </div></td>
+        </tr>`).join('') : '<tr><td colspan="7" class="empty-state" style="padding:24px">No hay diseños.</td></tr>';
+
+      const byId = Object.fromEntries(designs.map(d => [d.id, d]));
+      $('voteRows').innerHTML = state.votos.length ? state.votos
+        .slice().sort((a, b) => b.creado.localeCompare(a.creado))
+        .map(v => `
+          <tr>
+            <td>${esc(v.nombre)} ${esc(v.apellido)}</td>
+            <td>${divBadge(v.division)}</td>
+            <td>${v.designIds.map(id => byId[id] ? esc(byId[id].objeto) : '<i style="color:var(--muted)">(eliminado)</i>').join(' · ')}</td>
+            <td style="color:var(--muted);font-size:.9rem">${new Date(v.creado).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}</td>
+            <td><button class="btn danger sm" data-delvote="${esc(v.key)}" title="Anular voto">Anular</button></td>
+          </tr>`).join('') : '<tr><td colspan="5" class="empty-state" style="padding:24px">Todavía nadie votó.</td></tr>';
+
+      // Miniaturas
+      document.querySelectorAll('[data-thumb]').forEach(img => {
+        const d = byId[img.dataset.thumb];
+        if (thumbs.has(d.id)) return;
+        thumbnail(d.archivo, { width: 160, height: 160, color: DIV_COLORS[d.division] })
+          .then(src => { thumbs.set(d.id, src); img.src = src; })
+          .catch(() => {});
+      });
+    }
+
+    // ---------- Eventos ----------
+    $('loginForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      hideMsg($('loginMsg'));
+      try {
+        await api('/api/admin/login', { method: 'POST', body: { password: $('pass').value } });
+        $('pass').value = '';
+        load();
+      } catch (err) {
+        showMsg($('loginMsg'), err.message);
+      }
+    });
+
+    $('logout').addEventListener('click', async e => {
+      e.preventDefault();
+      await api('/api/admin/logout', { method: 'POST' }).catch(() => {});
+      showLogin();
+    });
+
+    document.querySelectorAll('[data-setting]').forEach(input => input.addEventListener('change', async () => {
+      try {
+        state.settings = await api('/api/admin/settings', { method: 'PATCH', body: { [input.dataset.setting]: input.checked } });
+      } catch (err) {
+        alert(err.message);
+        load();
+      }
+    }));
+
+    $('refresh').addEventListener('click', load);
+
+    $('divTabs').addEventListener('click', e => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      filter = b.dataset.div;
+      $('divTabs').querySelectorAll('button').forEach(x => {
+        x.className = x === b ? `on ${(x.dataset.div || '').toLowerCase()}` : '';
+      });
+      render();
+    });
+
+    $('designRows').addEventListener('click', async e => {
+      const b = e.target.closest('button, img');
+      if (!b) return;
+      const find = id => allDesigns().find(d => d.id === id);
+
+      if (b.dataset.view || b.dataset.thumb) {
+        const d = find(b.dataset.view || b.dataset.thumb);
+        if (d) openModal(d);
+      } else if (b.dataset.del) {
+        const d = find(b.dataset.del);
+        if (!confirm(`¿Eliminar "${d.objeto}" de ${d.nombre} ${d.apellido}? También se descuentan sus votos.`)) return;
+        try {
+          await api(`/api/admin/designs/${encodeURIComponent(d.id)}`, { method: 'DELETE' });
+          thumbs.delete(d.id);
+          load();
+        } catch (err) { alert(err.message); }
+      } else if (b.dataset.edit) {
+        const d = find(b.dataset.edit);
+        const actions = openModal(d, `
+          <form id="editForm" style="width:100%">
+            <div class="row">
+              <div class="field"><label>Nombre</label><input name="nombre" type="text" maxlength="60" value="${esc(d.nombre)}"></div>
+              <div class="field"><label>Apellido</label><input name="apellido" type="text" maxlength="60" value="${esc(d.apellido)}"></div>
+            </div>
+            <div class="row">
+              <div class="field"><label>Objeto</label><input name="objeto" type="text" maxlength="80" value="${esc(d.objeto)}"></div>
+              <div class="field"><label>División</label>
+                <select name="division"><option value="A" ${d.division === 'A' ? 'selected' : ''}>5° A</option><option value="B" ${d.division === 'B' ? 'selected' : ''}>5° B</option></select>
+              </div>
+            </div>
+            <button class="btn" type="submit">Guardar cambios</button>
+          </form>`);
+        actions.querySelector('#editForm').addEventListener('submit', async ev => {
+          ev.preventDefault();
+          const f = ev.target;
+          try {
+            await api(`/api/admin/designs/${encodeURIComponent(d.id)}`, {
+              method: 'PATCH',
+              body: { nombre: f.nombre.value, apellido: f.apellido.value, objeto: f.objeto.value, division: f.division.value }
+            });
+            closeModal();
+            if (d.division !== f.division.value) thumbs.delete(d.id);
+            load();
+          } catch (err) { alert(err.message); }
+        });
+      }
+    });
+
+    $('voteRows').addEventListener('click', async e => {
+      const b = e.target.closest('[data-delvote]');
+      if (!b) return;
+      if (!confirm('¿Anular este voto? La persona va a poder votar de nuevo.')) return;
+      try {
+        await api(`/api/admin/votes/${encodeURIComponent(b.dataset.delvote)}`, { method: 'DELETE' });
+        load();
+      } catch (err) { alert(err.message); }
+    });
+
+    $('resetVotes').addEventListener('click', async () => {
+      if (!confirm('¿Seguro que querés BORRAR TODOS los votos? No se puede deshacer.')) return;
+      if (prompt('Escribí BORRAR para confirmar') !== 'BORRAR') return;
+      try {
+        await api('/api/admin/votes', { method: 'DELETE' });
+        load();
+      } catch (err) { alert(err.message); }
+    });
+
+    $('addForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const f = e.target;
+      hideMsg($('addMsg'));
+      if (!f.nombre.value.trim() || !f.apellido.value.trim() || !f.objeto.value.trim()) return showMsg($('addMsg'), 'Completá todos los campos.');
+      if (!f.division.value) return showMsg($('addMsg'), 'Elegí la división.');
+      if (!f.archivo.files[0]) return showMsg($('addMsg'), 'Elegí el archivo STL.');
+      $('aSend').disabled = true;
+      try {
+        await api('/api/admin/designs', { method: 'POST', body: new FormData(f) });
+        showMsg($('addMsg'), 'Diseño agregado ✔', true);
+        f.reset();
+        load();
+      } catch (err) {
+        showMsg($('addMsg'), err.message);
+      } finally {
+        $('aSend').disabled = false;
+      }
+    });
+
+    load();
+  </script>
+</body>
+</html>

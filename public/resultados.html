@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Resultados · Diseños 3D 5to año</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
+  <script type="importmap">
+    { "imports": {
+      "three": "/vendor/three/build/three.module.js",
+      "three/addons/": "/vendor/three/examples/jsm/"
+    } }
+  </script>
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <a class="brand" href="/votar"><span class="brand-logo">🏆</span> Resultados · 5to</a>
+      <nav class="nav">
+        <a href="/votar">Votar</a>
+        <a href="/resultados" class="active">Resultados</a>
+      </nav>
+    </header>
+    <section class="hero">
+      <h1>Los <span class="grad">ganadores</span></h1>
+      <p>Los 2 diseños más votados de cada división.</p>
+    </section>
+    <div id="podium" class="podium"></div>
+    <footer>Escuela · 5to año · Proyecto de diseño 3D</footer>
+  </div>
+  <script type="module">
+    import { api, esc } from '/js/common.js';
+    import { renderPodium } from '/js/results.js';
+    import { openModal } from '/js/modal.js';
+
+    const el = document.getElementById('podium');
+    try {
+      renderPodium(el, await api('/api/results'), { onView: d => openModal(d) });
+    } catch (err) {
+      el.outerHTML = `<div class="closed-banner">🔒 ${esc(err.message)}</div>`;
+    }
+  </script>
+</body>
+</html>

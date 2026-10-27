@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subí tu diseño 3D · 5to año</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧊</text></svg>">
+  <script type="importmap">
+    { "imports": {
+      "three": "/vendor/three/build/three.module.js",
+      "three/addons/": "/vendor/three/examples/jsm/"
+    } }
+  </script>
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <a class="brand" href="/"><span class="brand-logo">🧊</span> Diseños 3D · 5to</a>
+      <nav class="nav">
+        <a href="/" class="active">Subir diseño</a>
+        <a href="/votar">Votar</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <h1>Subí tu <span class="grad">diseño 3D</span></h1>
+      <p>Cargá tu archivo <b>.stl</b> con tu nombre, apellido y el nombre del objeto. Después todos van a poder verlo en 3D y votar a sus favoritos.</p>
+    </section>
+
+    <div id="closed" class="closed-banner" hidden>🔒 La subida de diseños está cerrada por ahora.</div>
+
+    <div class="grid-2">
+      <form id="form" class="card" novalidate>
+        <div class="row">
+          <div class="field">
+            <label for="nombre">Nombre</label>
+            <input id="nombre" name="nombre" type="text" autocomplete="given-name" maxlength="60" required placeholder="Ej: Martina">
+          </div>
+          <div class="field">
+            <label for="apellido">Apellido</label>
+            <input id="apellido" name="apellido" type="text" autocomplete="family-name" maxlength="60" required placeholder="Ej: González">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="objeto">Nombre del objeto</label>
+          <input id="objeto" name="objeto" type="text" maxlength="80" required placeholder="Ej: Porta lápices hexagonal">
+        </div>
+
+        <div class="field">
+          <label>División</label>
+          <div class="seg">
+            <input type="radio" name="division" id="divA" value="A" required>
+            <label for="divA" class="div-a">5° A</label>
+            <input type="radio" name="division" id="divB" value="B">
+            <label for="divB" class="div-b">5° B</label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="archivo">Archivo STL</label>
+          <div id="drop" class="drop" tabindex="0" role="button" aria-label="Elegir archivo STL">
+            <div class="big">📦</div>
+            <b>Arrastrá tu archivo acá o tocá para elegirlo</b>
+            <small>Solo archivos .stl · máximo <span id="maxmb">50</span> MB</small>
+            <div id="fname" class="fname"></div>
+          </div>
+          <input id="archivo" name="archivo" type="file" accept=".stl" class="sr-only">
+        </div>
+
+        <button id="send" class="btn block" type="submit">🚀 Subir diseño</button>
+        <div id="msg" class="msg" role="status"></div>
+      </form>
+
+      <div class="card">
+        <div id="preview" class="preview">
+          <div class="placeholder" id="ph">Acá vas a ver una vista previa en 3D de tu archivo 👀</div>
+        </div>
+        <p class="hint">Arrastrá para girar · rueda o pellizco para hacer zoom</p>
+      </div>
+    </div>
+
+    <footer>Escuela · 5to año · Proyecto de diseño 3D</footer>
+  </div>
+
+  <script type="module">
+    import { api, showMsg, hideMsg, DIV_COLORS } from '/js/common.js';
+    import { parseGeometry, createViewer } from '/js/stl.js';
+
+    const form = document.getElementById('form');
+    const drop = document.getElementById('drop');
+    const fileInput = document.getElementById('archivo');
+    const fname = document.getElementById('fname');
+    const msg = document.getElementById('msg');
+    const send = document.getElementById('send');
+    const ph = document.getElementById('ph');
+    let file = null;
+    let viewer = null;
+    let maxMb = 50;
+
+    api('/api/config').then(cfg => {
+      maxMb = cfg.maxFileMb;
+      document.getElementById('maxmb').textContent = maxMb;
+      if (!cfg.subidaAbierta) {
+        document.getElementById('closed').hidden = false;
+        send.disabled = true;
+      }
+    }).catch(() => {});
+
+    function currentColor() {
+      const div = form.division.value;
+      return DIV_COLORS[div] || 0x8b7bff;
+    }
+
+    async function setFile(f) {
+      hideMsg(msg);
+      if (!f) return;
+      if (!/\.stl$/i.test(f.name)) {
+        showMsg(msg, 'El archivo tiene que ser .stl');
+        return;
+      }
+      if (f.size > maxMb * 1024 * 1024) {
+        showMsg(msg, `El archivo supera los ${maxMb} MB.`);
+        return;
+      }
+      file = f;
+      fname.textContent = `✔ ${f.name} (${(f.size / 1024 / 1024).toFixed(2)} MB)`;
+      try {
+        const geo = parseGeometry(await f.arrayBuffer());
+        if (viewer) viewer.dispose();
+        viewer = createViewer(document.getElementById('preview'), { color: currentColor() });
+        viewer.showGeometry(geo);
+        ph.hidden = true;
+      } catch {
+        showMsg(msg, 'No pudimos leer el archivo. ¿Seguro que es un STL válido?');
+      }
+    }
+
+    drop.addEventListener('click', () => fileInput.click());
+    drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
+    fileInput.addEventListener('change', () => setFile(fileInput.files[0]));
+    ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+    ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+    drop.addEventListener('drop', e => setFile(e.dataTransfer.files[0]));
+
+    form.addEventListener('change', e => {
+      if (e.target.name === 'division' && file) setFile(file);
+    });
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      hideMsg(msg);
+      const nombre = form.nombre.value.trim();
+      const apellido = form.apellido.value.trim();
+      const objeto = form.objeto.value.trim();
+      const division = form.division.value;
+      if (!nombre || !apellido || !objeto) return showMsg(msg, 'Completá nombre, apellido y nombre del objeto.');
+      if (!division) return showMsg(msg, 'Elegí tu división (A o B).');
+      if (!file) return showMsg(msg, 'Falta elegir el archivo STL.');
+
+      const fd = new FormData();
+      fd.append('nombre', nombre);
+      fd.append('apellido', apellido);
+      fd.append('objeto', objeto);
+      fd.append('division', division);
+      fd.append('archivo', file);
+
+      send.disabled = true;
+      send.textContent = 'Subiendo…';
+      try {
+        await api('/api/designs', { method: 'POST', body: fd });
+        showMsg(msg, `¡Listo, ${nombre}! Tu diseño "${objeto}" ya está subido 🎉`, true);
+        form.reset();
+        file = null;
+        fname.textContent = '';
+      } catch (err) {
+        showMsg(msg, err.message);
+      } finally {
+        send.disabled = false;
+        send.textContent = '🚀 Subir diseño';
+      }
+    });
+  </script>
+</body>
+</html>

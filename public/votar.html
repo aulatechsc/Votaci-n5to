@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Votación de diseños 3D · 5to año</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗳️</text></svg>">
+  <script type="importmap">
+    { "imports": {
+      "three": "/vendor/three/build/three.module.js",
+      "three/addons/": "/vendor/three/examples/jsm/"
+    } }
+  </script>
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <a class="brand" href="/votar"><span class="brand-logo">🗳️</span> Votación 3D · 5to</a>
+      <nav class="nav" id="nav">
+        <a href="/votar" class="active">Votar</a>
+        <a href="/resultados" id="navRes" hidden>Resultados</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <h1>Elegí tus <span class="grad">2 diseños favoritos</span></h1>
+      <p>Mirá cada objeto en 3D, elegí los dos que más te gusten de tu división y mandá tu voto. Se vota <b>una sola vez</b>, así que pensalo bien. Los 2 más votados de cada división ganan 🏆</p>
+    </section>
+
+    <div id="closed" class="closed-banner" hidden></div>
+
+    <!-- Paso 1: identificarse -->
+    <section id="step1" class="card" style="max-width:620px" hidden>
+      <div class="steps">
+        <span class="step on"><b>1</b> Quién sos</span>
+        <span class="step"><b>2</b> Elegí 2 diseños</span>
+        <span class="step"><b>3</b> Confirmá</span>
+      </div>
+      <form id="who" novalidate>
+        <div class="row">
+          <div class="field">
+            <label for="vNombre">Tu nombre</label>
+            <input id="vNombre" type="text" maxlength="60" autocomplete="given-name" required>
+          </div>
+          <div class="field">
+            <label for="vApellido">Tu apellido</label>
+            <input id="vApellido" type="text" maxlength="60" autocomplete="family-name" required>
+          </div>
+        </div>
+        <div class="field">
+          <label>Tu división</label>
+          <div class="seg">
+            <input type="radio" name="vDiv" id="vA" value="A"><label for="vA" class="div-a">5° A</label>
+            <input type="radio" name="vDiv" id="vB" value="B"><label for="vB" class="div-b">5° B</label>
+          </div>
+        </div>
+        <button class="btn block" type="submit">Continuar →</button>
+        <div id="whoMsg" class="msg" role="status"></div>
+      </form>
+    </section>
+
+    <!-- Paso 2: galería -->
+    <section id="step2" hidden>
+      <div class="steps">
+        <span class="step"><b>1</b> <span id="whoLabel"></span></span>
+        <span class="step on"><b>2</b> Elegí 2 diseños</span>
+        <span class="step"><b>3</b> Confirmá</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div id="divTitle" style="font-size:1.2rem;font-weight:700"></div>
+        <button class="btn ghost sm" id="changeWho">✎ Cambiar mis datos</button>
+      </div>
+      <div id="gallery" class="gallery"></div>
+
+      <div class="votebar">
+        <div class="chips" id="chips"></div>
+        <button class="btn" id="goConfirm" disabled>Votar ✓</button>
+      </div>
+    </section>
+
+    <!-- Listo -->
+    <section id="done" class="card done" hidden>
+      <div class="big">🎉</div>
+      <h2>¡Gracias por votar!</h2>
+      <p style="color:var(--muted)">Tu voto quedó registrado. Los resultados se van a publicar cuando cierre la votación.</p>
+      <button class="btn ghost" id="again" hidden>👥 Que vote otra persona en esta compu</button>
+    </section>
+
+    <footer>Escuela · 5to año · Proyecto de diseño 3D</footer>
+  </div>
+
+  <!-- Confirmación -->
+  <div class="modal" id="confirm">
+    <div class="modal-box" style="width:min(520px,100%)" role="dialog" aria-modal="true" aria-labelledby="cTitle">
+      <div class="modal-head"><h3 id="cTitle">Confirmá tu voto</h3><button class="xbtn" id="cClose" aria-label="Cerrar">✕</button></div>
+      <div class="modal-body">
+        <p style="margin-top:0">Vas a votar a estos dos diseños. <b>Una vez enviado no se puede cambiar.</b></p>
+        <div id="cList"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap">
+          <button class="btn ghost" id="cBack">Volver</button>
+          <button class="btn" id="cSend">Enviar voto 🗳️</button>
+        </div>
+        <div id="cMsg" class="msg" role="status"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { api, esc, showMsg, hideMsg, divBadge, DIV_COLORS } from '/js/common.js';
+    import { thumbnail } from '/js/stl.js';
+    import { openModal, closeModal } from '/js/modal.js';
+
+    const $ = id => document.getElementById(id);
+    const VOTED_KEY = 'votacion5to_voto';
+    const state = { voter: null, designs: [], selected: [], max: 2 };
+
+    function show(section) {
+      ['step1', 'step2', 'done'].forEach(id => { $(id).hidden = id !== section; });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    const cfg = await api('/api/config').catch(() => null);
+    // En compus compartidas (un voto por dispositivo desactivado) no recordamos el voto en el navegador
+    const perDevice = !cfg || cfg.unVotoPorDispositivo;
+    let alreadyVoted = false;
+    try { alreadyVoted = perDevice && !!localStorage.getItem(VOTED_KEY); } catch { /* sin storage */ }
+    if (cfg) {
+      state.max = cfg.votosPorPersona;
+      if (cfg.resultadosPublicos) $('navRes').hidden = false;
+    }
+    if (!perDevice) $('again').hidden = false;
+
+    if (cfg && !cfg.votacionAbierta) {
+      $('closed').hidden = false;
+      $('closed').innerHTML = cfg.resultadosPublicos
+        ? '🔒 La votación ya cerró. <a href="/resultados">Mirá los resultados →</a>'
+        : '🔒 La votación está cerrada por ahora.';
+    } else if (alreadyVoted) {
+      show('done');
+    } else {
+      show('step1');
+    }
+
+    // ---------- Paso 1 ----------
+    $('who').addEventListener('submit', async e => {
+      e.preventDefault();
+      const nombre = $('vNombre').value.trim();
+      const apellido = $('vApellido').value.trim();
+      const division = document.querySelector('input[name=vDiv]:checked')?.value;
+      if (!nombre || !apellido) return showMsg($('whoMsg'), 'Poné tu nombre y apellido.');
+      if (!division) return showMsg($('whoMsg'), 'Elegí tu división.');
+      hideMsg($('whoMsg'));
+      state.voter = { nombre, apellido, division };
+      state.selected = [];
+      await loadGallery();
+      show('step2');
+    });
+
+    $('changeWho').addEventListener('click', () => show('step1'));
+    $('again').addEventListener('click', () => {
+      $('who').reset();
+      state.voter = null;
+      state.selected = [];
+      show('step1');
+    });
+
+    // ---------- Paso 2 ----------
+    const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+
+    async function loadGallery() {
+      const { division, nombre, apellido } = state.voter;
+      $('whoLabel').textContent = `${nombre} ${apellido}`;
+      $('divTitle').innerHTML = `Diseños de ${divBadge(division)}`;
+      const gallery = $('gallery');
+      gallery.innerHTML = '<div class="empty-state"><div class="big">⏳</div>Cargando diseños…</div>';
+
+      try {
+        state.designs = await api(`/api/designs?division=${division}`);
+      } catch (err) {
+        gallery.innerHTML = `<div class="empty-state">${esc(err.message)}</div>`;
+        return;
+      }
+
+      // No se puede votar el propio diseño
+      const me = norm(nombre) + '|' + norm(apellido);
+      state.designs.forEach(d => { d.mine = norm(d.nombre) + '|' + norm(d.apellido) === me; });
+
+      if (!state.designs.length) {
+        gallery.innerHTML = '<div class="empty-state"><div class="big">🫥</div>Todavía no hay diseños en tu división.</div>';
+        renderChips();
+        return;
+      }
+
+      gallery.innerHTML = state.designs.map(d => `
+        <article class="item" data-id="${esc(d.id)}">
+          <div class="check">✓</div>
+          <div class="thumb" data-view="${esc(d.id)}" title="Ver en 3D">
+            <div class="spin"></div>
+            <span class="zoom">🔍 Ver en 3D</span>
+          </div>
+          <div class="info">
+            <div class="obj">${esc(d.objeto)}</div>
+            <div class="who">${esc(d.nombre)} ${esc(d.apellido)}</div>
+            <div class="pick">
+              ${d.mine
+                ? '<button class="btn ghost sm block" disabled>Es tu diseño 😉</button>'
+                : `<button class="btn ghost sm block" data-pick="${esc(d.id)}">Elegir</button>`}
+            </div>
+          </div>
+        </article>`).join('');
+
+      gallery.querySelectorAll('[data-view]').forEach(el => el.addEventListener('click', () => view(el.dataset.view)));
+      gallery.querySelectorAll('[data-pick]').forEach(el => el.addEventListener('click', () => toggle(el.dataset.pick)));
+      renderChips();
+
+      // Miniaturas (una a la vez, con un solo renderer)
+      for (const d of state.designs) {
+        const thumb = gallery.querySelector(`[data-view="${CSS.escape(d.id)}"]`);
+        thumbnail(d.archivo, { color: DIV_COLORS[d.division] })
+          .then(src => {
+            const img = new Image();
+            img.alt = d.objeto;
+            img.src = src;
+            thumb.querySelector('.spin')?.replaceWith(img);
+          })
+          .catch(() => { thumb.querySelector('.spin')?.replaceWith(Object.assign(document.createElement('span'), { textContent: '⚠️ No se pudo previsualizar' })); });
+      }
+    }
+
+    function view(id) {
+      const d = state.designs.find(x => x.id === id);
+      if (!d) return;
+      const sel = state.selected.includes(id);
+      const actions = openModal(d, d.mine ? '' : `<button class="btn" id="mPick">${sel ? 'Quitar de mis votos' : 'Elegir este diseño ✓'}</button>`);
+      const btn = actions.querySelector('#mPick');
+      if (btn) btn.addEventListener('click', () => { toggle(id); closeModal(); });
+    }
+
+    function toggle(id) {
+      const i = state.selected.indexOf(id);
+      if (i >= 0) state.selected.splice(i, 1);
+      else if (state.selected.length < state.max) state.selected.push(id);
+      else {
+        // Si ya hay 2, reemplaza el más viejo
+        state.selected.shift();
+        state.selected.push(id);
+      }
+      renderChips();
+    }
+
+    function renderChips() {
+      document.querySelectorAll('.item').forEach(el => {
+        const on = state.selected.includes(el.dataset.id);
+        el.classList.toggle('selected', on);
+        const b = el.querySelector('[data-pick]');
+        if (b) b.textContent = on ? 'Elegido ✓ (quitar)' : 'Elegir';
+      });
+      const chips = [];
+      for (let i = 0; i < state.max; i++) {
+        const d = state.designs.find(x => x.id === state.selected[i]);
+        chips.push(d ? `<span class="chip">${i + 1}. ${esc(d.objeto)}</span>` : `<span class="chip empty">${i + 1}. sin elegir</span>`);
+      }
+      $('chips').innerHTML = chips.join('');
+      $('goConfirm').disabled = state.selected.length !== state.max;
+    }
+
+    // ---------- Paso 3 ----------
+    const confirmModal = $('confirm');
+    function closeConfirm() { confirmModal.classList.remove('show'); document.body.style.overflow = ''; }
+
+    $('goConfirm').addEventListener('click', () => {
+      $('cList').innerHTML = state.selected.map((id, i) => {
+        const d = state.designs.find(x => x.id === id);
+        return `<div class="rank"><div class="pos">${i + 1}</div><div class="grow"><div><b>${esc(d.objeto)}</b></div><div style="color:var(--muted);font-size:.9rem">${esc(d.nombre)} ${esc(d.apellido)}</div></div></div>`;
+      }).join('');
+      hideMsg($('cMsg'));
+      confirmModal.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    });
+    $('cClose').addEventListener('click', closeConfirm);
+    $('cBack').addEventListener('click', closeConfirm);
+    confirmModal.addEventListener('click', e => { if (e.target === confirmModal) closeConfirm(); });
+
+    $('cSend').addEventListener('click', async () => {
+      const btn = $('cSend');
+      btn.disabled = true;
+      btn.textContent = 'Enviando…';
+      try {
+        await api('/api/vote', { method: 'POST', body: { ...state.voter, designIds: state.selected } });
+        if (perDevice) {
+          try { localStorage.setItem(VOTED_KEY, new Date().toISOString()); } catch { /* sin storage */ }
+        }
+        closeConfirm();
+        show('done');
+      } catch (err) {
+        showMsg($('cMsg'), err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Enviar voto 🗳️';
+      }
+    });
+  </script>
+</body>
+</html>
