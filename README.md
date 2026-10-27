@@ -9,6 +9,16 @@ Aplicación web para que los alumnos de 5to (divisiones **A** y **B**) suban sus
 | Resultados | `/resultados` | Ranking público con los 2 ganadores por división (se activa desde el panel) |
 | Panel | `/admin` | Gestión protegida con contraseña |
 
+## Capturas
+
+| Subida | Votación | Visor 3D |
+|---|---|---|
+| ![Subida](capturas/1-subir.png) | ![Votación](capturas/2-votar.png) | ![Visor 3D](capturas/3-visor-3d.png) |
+
+| Resultados | Panel | Celular |
+|---|---|---|
+| ![Resultados](capturas/4-resultados.png) | ![Panel](capturas/6-admin-panel.png) | ![Celular](capturas/7-celular.png) |
+
 ## Reglas de votación
 
 - Cada persona vota **una sola vez** y elige **exactamente 2 diseños** de **su propia división**.
